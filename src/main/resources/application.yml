@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /userIdenity
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/WebManage
+    username: admin
+    password: 123456
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  security:
+    jwt:
+      signer-key: "MHNtdHFqem1nZmMyNmgzdDN5MXhxM2hpZXQ2YmxvYnVqYXpxYjIyNTRlaWNvMWRzMnFpZXd2dWNidmJvOGtyN2w0ZnhjdWV1eDBweDB5MW54dHJxMnFhczUwbG5qMGdqNTdzMHFzamppczU3NHBjZ3l4NmlnOWNiYWJqaXgwMGE="
+
+cors:
+  allowed-origins: http://localhost:3000
+  allowed-methods: GET,POST,PUT,DELETE
+  allowed-headers: "*"
+
+vnpay:
+  tmnCode: V3FZTK5D
+  hashSecret: DKB4M4P0VLKUWVRZC3F42S2YESLIW7XJ
+  payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  returnUrl: http://localhost:8080/payment/vnpay-return
