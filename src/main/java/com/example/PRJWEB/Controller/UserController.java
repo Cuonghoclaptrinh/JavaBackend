@@ -32,7 +32,7 @@
 
         // Tạo nhân viên (STAFF) - Chỉ admin
         @PostMapping("/employees")
-        ApiResponse<UserResponse> createEmployee(@RequestBody @Valid UserRequest request) {
+            ApiResponse<UserResponse> createEmployee(@RequestBody @Valid UserRequest request) {
             return ApiResponse.<UserResponse>builder()
                     .result(userService.createEmployee(request))
                     .build();

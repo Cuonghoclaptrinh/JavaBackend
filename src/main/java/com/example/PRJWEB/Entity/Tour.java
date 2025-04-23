@@ -4,8 +4,9 @@ import com.example.PRJWEB.Enums.TourType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
+import com.example.PRJWEB.Entity.TourSchedule;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Setter
@@ -37,9 +38,6 @@ public class Tour {
     @Column(name = "transportation")
     String transportation; // phuong_tien -> transportation
 
-    @Column(name = "people_limit")
-    Integer peopleLimit; // gioi_han_nguoi -> peopleLimit
-
     @Column(name = "accommodation")
     String accommodation; // noi_o -> accommodation
 
@@ -58,4 +56,7 @@ public class Tour {
 
     @Column(name = "image")
     String image; // hinh_anh -> image
+
+    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<TourSchedule> tourSchedules;
 }

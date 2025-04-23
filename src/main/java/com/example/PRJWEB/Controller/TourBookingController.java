@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/tour_booking")
 @RequiredArgsConstructor
@@ -24,5 +26,17 @@ public class TourBookingController {
     public ApiResponse<TourBookingResponse> bookTour(@RequestBody TourBookingRequest request) {
         TourBookingResponse response = tourBookingService.bookTour(request);
         return new ApiResponse<>(200, "Booking successful", response);
+    }
+
+    @GetMapping("/my")
+    public List<TourBookingResponse> getMyBookings() {
+        return tourBookingService.getBookingsForCurrentUser();
+    }
+
+
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    public List<TourBookingResponse> getAllBookings() {
+        return tourBookingService.getAllBookings();
     }
 }

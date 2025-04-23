@@ -1,7 +1,7 @@
 server:
   port: 8080
   servlet:
-    context-path: /userIdenity
+
 
 spring:
   datasource:
@@ -16,6 +16,12 @@ spring:
   security:
     jwt:
       signer-key: "MHNtdHFqem1nZmMyNmgzdDN5MXhxM2hpZXQ2YmxvYnVqYXpxYjIyNTRlaWNvMWRzMnFpZXd2dWNidmJvOGtyN2w0ZnhjdWV1eDBweDB5MW54dHJxMnFhczUwbG5qMGdqNTdzMHFzamppczU3NHBjZ3l4NmlnOWNiYWJqaXgwMGE="
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  thymeleaf:
+    enabled: false
 
 cors:
   allowed-origins: http://localhost:3000
@@ -26,4 +32,5 @@ vnpay:
   tmnCode: V3FZTK5D
   hashSecret: DKB4M4P0VLKUWVRZC3F42S2YESLIW7XJ
   payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-  returnUrl: http://localhost:8080/payment/vnpay-return
+  returnUrl: http://localhost:8080/userIdenity/payment/vnpay-return
+

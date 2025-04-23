@@ -2,13 +2,18 @@ package com.example.PRJWEB.Controller;
 
 import com.example.PRJWEB.DTO.Request.ApiResponse;
 import com.example.PRJWEB.DTO.Request.TourRequest;
+import com.example.PRJWEB.DTO.Request.TourScheduleRequest;
 import com.example.PRJWEB.DTO.Respon.TourResponse;
+import com.example.PRJWEB.Enums.TourType;
 import com.example.PRJWEB.Service.TourService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -20,20 +25,19 @@ public class TourController {
     TourService tourService;
 
     @PostMapping
-    public ApiResponse<TourResponse> addTour(@RequestBody TourRequest request) {
-        TourResponse response = tourService.addTour(request);
+    public ApiResponse<TourResponse> addTour(@RequestBody @Valid TourRequest request)  {
+        System.out.println("Price from request: " + request.getPrice());
         return ApiResponse.<TourResponse>builder()
                 .message("Thêm tour thành công")
-                .result(response)
+                .result(tourService.addTour(request))
                 .build();
     }
 
-    @PutMapping("/{id}")
-    public ApiResponse<TourResponse> updateTour(@PathVariable("id") Integer id, @RequestBody TourRequest request) {
-        TourResponse response = tourService.updateTour(id, request);
+    @PutMapping(value ="/{id}" )
+    public ApiResponse<TourResponse> updateTour(@PathVariable("id") Integer id,@RequestBody @Valid TourRequest request)  {
         return ApiResponse.<TourResponse>builder()
                 .message("Cập nhật tour thành công")
-                .result(response)
+                .result(tourService.updateTour(id,request))
                 .build();
     }
 
@@ -54,18 +58,31 @@ public class TourController {
                 .build();
     }
 
-//    @GetMapping("/filter")
-//    public ApiResponse<List<TourResponse>> filterTour(
-//            @RequestParam(required = false) String keyword,
-//            @RequestParam(required = false) String region,
-//            @RequestParam(required = false) String tourType,
-//            @RequestParam(required = false) BigDecimal minPrice,
-//            @RequestParam(required = false) BigDecimal maxPrice
-//    ) {
-//        List<TourResponse> filtered = tourService.filterTour(keyword, region, tourType, minPrice, maxPrice);
-//        return ApiResponse.<List<TourResponse>>builder()
-//                .message("Lọc tour thành công")
-//                .result(filtered)
-//                .build();
-//    }
+    @PostMapping("/{tourId}/schedule")
+    public ApiResponse<String> addSchedule(
+            @PathVariable Integer tourId,
+            @RequestBody TourScheduleRequest scheduleRequest
+    ) {
+        tourService.addScheduleToTour(tourId, scheduleRequest);
+        return ApiResponse.<String>builder()
+                .message("Thêm lịch khởi hành mới thành công!")
+                .result("OK")
+                .build();
+    }
+
+
+    @GetMapping("/filter")
+    public ApiResponse<List<TourResponse>> filterTour(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String tourType,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice
+    ) {
+        List<TourResponse> filtered = tourService.filterTour(keyword, region, tourType, minPrice, maxPrice);
+        return ApiResponse.<List<TourResponse>>builder()
+                .message("Lọc tour thành công")
+                .result(filtered)
+                .build();
+    }
 }

@@ -14,6 +14,8 @@ import com.example.PRJWEB.Repository.TourBookingRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -23,6 +25,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +38,6 @@ public class PaymentService {
     VNPayConfig vnPayConfig;
 
     public PaymentResponse makePayment(PaymentRequest request) {
-        // Tìm booking theo ID
         Tour_booking booking = tourBookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
@@ -46,27 +48,99 @@ public class PaymentService {
 
         BigDecimal totalPrice = booking.getTotalPrice();
         BigDecimal remaining = totalPrice.subtract(paidAmount);
+        BigDecimal amountToPay = request.getAmount();
 
-        // Kiểm tra xem số tiền thanh toán có hợp lệ không
-        if (request.getPaidAmount().compareTo(remaining) > 0) {
-            throw new AppException(ErrorCode.PAYMENT_AMOUNT_EXCEED);
+        BigDecimal depositAmount = totalPrice.multiply(new BigDecimal("0.3"));
+
+        if (paidAmount.compareTo(BigDecimal.ZERO) == 0) {
+            // Lần thanh toán đầu tiên
+            if (amountToPay.compareTo(depositAmount) == 0) {
+                // Trường hợp thanh toán cọc
+                Payment payment = Payment.builder()
+                        .booking(booking)
+                        .amount(depositAmount)
+                        .paymentDate(LocalDateTime.now())
+                        .method(request.getMethod())
+                        .status(PaymentStatus.PENDING)
+                        .remainingAmount(totalPrice.subtract(depositAmount))
+                        .build();
+                paymentRepository.save(payment);
+                booking.setStatus("Booked");
+                tourBookingRepository.save(booking);
+                return paymentMapper.toPaymentResponse(payment);
+            } else if (amountToPay.compareTo(totalPrice) == 0) {
+                // Trường hợp thanh toán full luôn từ đầu
+                Payment payment = Payment.builder()
+                        .booking(booking)
+                        .amount(totalPrice)
+                        .paymentDate(LocalDateTime.now())
+                        .method(request.getMethod())
+                        .status(PaymentStatus.PAID)
+                        .remainingAmount(BigDecimal.ZERO)
+                        .build();
+                paymentRepository.save(payment);
+                booking.setStatus("Paid");
+                tourBookingRepository.save(booking);
+                return paymentMapper.toPaymentResponse(payment);
+            } else {
+                throw new AppException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+            }
+        } else {
+            // Thanh toán phần còn lại
+            if (amountToPay.compareTo(remaining) == 0) {
+                Payment payment = Payment.builder()
+                        .booking(booking)
+                        .amount(remaining)
+                        .paymentDate(LocalDateTime.now())
+                        .method(request.getMethod())
+                        .status(PaymentStatus.PAID)
+                        .remainingAmount(BigDecimal.ZERO)
+                        .build();
+                paymentRepository.save(payment);
+                booking.setStatus("Paid");
+                tourBookingRepository.save(booking);
+                return paymentMapper.toPaymentResponse(payment);
+            } else if (remaining.compareTo(BigDecimal.ZERO) == 0) {
+                throw new AppException(ErrorCode.PAYMENT_ALREADY_COMPLETED);
+            } else {
+                throw new AppException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+            }
+        }
+    }
+
+    public List<PaymentResponse> getUserPayments() {
+        // Lấy user_id từ JWT claim user_id
+        Long userId = ((Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getClaim("user_id");
+        if (userId == null) {
+            throw new AppException(ErrorCode.USER_NOT_EXISTED);
         }
 
-        // Tạo đối tượng Payment
-        Payment payment = Payment.builder()
-                .booking(booking)
-                .amount(request.getPaidAmount())
-                .paymentDate(LocalDateTime.now())
-                .method(request.getMethod())
-                .status(PaymentStatus.PAID)
-                .remainingAmount(remaining)
-                .build();
+        // Tìm các booking của user
+        List<Tour_booking> bookings = tourBookingRepository.findByCustomerId(userId);
 
-        // Lưu Payment vào DB
-        paymentRepository.save(payment);
+        // Lấy danh sách payments từ các booking
+        List<Payment> payments = bookings.stream()
+                .flatMap(booking -> paymentRepository.findByBooking(booking).stream())
+                .collect(Collectors.toList());
 
-        // Trả về thông tin Payment Response
-        return paymentMapper.toPaymentResponse(payment);
+        // Chuyển đổi sang PaymentResponse
+        return payments.stream()
+                .map(paymentMapper::toPaymentResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<PaymentResponse> getAllPayments() {
+        // Kiểm tra quyền admin
+        String scope = ((Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getClaimAsString("scope");
+        if (!"ADMIN".equals(scope)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Lấy toàn bộ payments
+        List<Payment> payments = paymentRepository.findAll();
+        return payments.stream()
+                .map(paymentMapper::toPaymentResponse)
+                .collect(Collectors.toList());
     }
 
     public String createVnpayPaymentUrl(Long bookingId, BigDecimal amount) {

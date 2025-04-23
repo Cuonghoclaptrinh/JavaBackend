@@ -34,5 +34,6 @@ public class Payment {
 
     String method;
 
+    @Enumerated(EnumType.STRING)
     PaymentStatus status;
 }

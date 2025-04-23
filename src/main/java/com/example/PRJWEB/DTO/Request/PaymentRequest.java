@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PaymentRequest {
     Long bookingId;
-    BigDecimal paidAmount;
     String method;
+    BigDecimal amount;
+    boolean payFull;
 }

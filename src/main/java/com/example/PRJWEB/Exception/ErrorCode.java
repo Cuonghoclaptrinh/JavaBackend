@@ -24,7 +24,11 @@ public enum ErrorCode {
 
     TOUR_NOT_EXISTED(1010,"Tout not existed" , HttpStatus.NOT_FOUND),
     BOOKING_NOT_FOUND(1011 , "booking not found" , HttpStatus.NOT_FOUND),
-    PAYMENT_AMOUNT_EXCEED(1012 , "payment amount exceed" , HttpStatus.BAD_REQUEST)
+    PAYMENT_AMOUNT_EXCEED(1012 , "payment amount exceed" , HttpStatus.BAD_REQUEST),
+    PAYMENT_ALREADY_COMPLETED(1013 , "payment already completed" , HttpStatus.BAD_REQUEST),
+    INVALID_BOOKING_STATUS(1013 , "invalid booking status" , HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_AMOUNT(1013 , "invalid payment amount" , HttpStatus.BAD_REQUEST),
+
     ;
     int code;
     String message;
