@@ -26,9 +26,14 @@ public enum ErrorCode {
     BOOKING_NOT_FOUND(1011 , "booking not found" , HttpStatus.NOT_FOUND),
     PAYMENT_AMOUNT_EXCEED(1012 , "payment amount exceed" , HttpStatus.BAD_REQUEST),
     PAYMENT_ALREADY_COMPLETED(1013 , "payment already completed" , HttpStatus.BAD_REQUEST),
-    INVALID_BOOKING_STATUS(1013 , "invalid booking status" , HttpStatus.BAD_REQUEST),
-    INVALID_PAYMENT_AMOUNT(1013 , "invalid payment amount" , HttpStatus.BAD_REQUEST),
-
+    INVALID_BOOKING_STATUS(1014 , "invalid booking status" , HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_AMOUNT(1015 , "invalid payment amount" , HttpStatus.BAD_REQUEST),
+    INSUFFICIENT_PAYMENT_AMOUNT(1016 , "insufficient payment amount" , HttpStatus.BAD_REQUEST),
+    INSUFFICIENT_DEPOSIT_AMOUNT(1017 , "insufficient deposit amount" , HttpStatus.BAD_REQUEST),
+    NOTIFICATION_NOT_FOUND(1018 , "notification not found" , HttpStatus.BAD_REQUEST),
+    INVALID_ROLE(1005, "Invalid role", HttpStatus.BAD_REQUEST),
+    INVALID_ORDER_INFO(1006, "Invalid order info", HttpStatus.BAD_REQUEST),
+    INVALID_AMOUNT(1005, "Invalid amount", HttpStatus.BAD_REQUEST);
     ;
     int code;
     String message;

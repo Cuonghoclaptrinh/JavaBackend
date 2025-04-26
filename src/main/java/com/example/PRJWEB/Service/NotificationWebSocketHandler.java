@@ -1,6 +1,8 @@
 package com.example.PRJWEB.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -10,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class NotificationWebSocketHandler extends TextWebSocketHandler {
+    private static final Logger logger = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -18,9 +21,9 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         String userId = getUserIdFromSession(session);
         if (userId != null) {
             userSessions.put(userId, session);
-            System.out.println("Connected user: " + userId + ", Session: " + session.getId());
+            logger.info("Connected user: {}, Session: {}", userId, session.getId());
         } else {
-            System.out.println("Failed to get userId from session: " + session.getUri());
+            logger.warn("Failed to get userId from session: {}", session.getUri());
         }
     }
 
@@ -29,7 +32,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         String userId = getUserIdFromSession(session);
         if (userId != null) {
             userSessions.remove(userId);
-            System.out.println("Disconnected user: " + userId);
+            logger.info("Disconnected user: {}", userId);
         }
     }
 
@@ -37,9 +40,9 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession session = userSessions.get(userId);
         if (session != null && session.isOpen()) {
             session.sendMessage(new TextMessage(message));
-            System.out.println("Sent to user " + userId + ": " + message);
+            logger.info("Sent to user {}: {}", userId, message);
         } else {
-            System.out.println("No open session for user " + userId);
+            logger.warn("No open session for user {}", userId);
         }
     }
 
@@ -48,7 +51,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
             WebSocketSession session = entry.getValue();
             if (session.isOpen()) {
                 session.sendMessage(new TextMessage(message));
-                System.out.println("Sent to user " + entry.getKey() + ": " + message);
+                logger.info("Sent to user {}: {}", entry.getKey(), message);
             }
         }
     }

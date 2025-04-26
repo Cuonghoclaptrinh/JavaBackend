@@ -28,11 +28,15 @@ public class Tour_booking {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     User customer;  // Liên kết đến bảng User (customer)
 
+    @ManyToOne
+    @JoinColumn(name = "employee_id", referencedColumnName = "id")
+    User employee;
+
     @Column(name = "booking_date")
     LocalDateTime bookingDate = LocalDateTime.now();
 
     @Column(name = "status")
-    String status = "Pending";  // Mặc định là "Pending"
+    String status = "Pending";
 
     @Column(name = "adult_quantity")
     int adultQuantity;

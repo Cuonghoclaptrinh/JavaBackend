@@ -12,10 +12,7 @@ public interface NotificationRepository extends JpaRepository<Notification , Lon
     List<Notification> findByIsActiveTrueAndExpiresAtAfterAndUserId(LocalDateTime now, Long userId);
     List<Notification> findByIsActiveTrueAndTypeAndBookingIdAndUserId(String type, Long bookingId, Long userId);
     List<Notification> findByIsActiveTrueAndTypeAndUserIdIsNull(String type);
+    List<Notification> findByIsActiveTrueAndExpiresAtAfterAndTypeAndUserIdIsNull(LocalDateTime now, String type);
+
 }
-//List<Notification> findByIsActiveTrueAndExpiresAtAfter(LocalDateTime now);
-//List<Notification> findByIsActiveTrueAndExpiresAtAfterAndUserIdIsNull(LocalDateTime now);
-//List<Notification> findByIsActiveTrueAndExpiresAtAfterAndUserId(LocalDateTime now, Long userId);
-//List<Notification> findByIsActiveTrueAndTypeAndBookingIdAndUserId(String type, Long bookingId, Long userId);
-//List<Notification> findByIsActiveTrueAndTypeAndUserIdIsNull(String type, LocalDateTime now);
-//}
+

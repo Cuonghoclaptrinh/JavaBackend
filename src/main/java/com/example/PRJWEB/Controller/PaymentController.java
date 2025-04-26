@@ -5,6 +5,8 @@ import com.example.PRJWEB.DTO.Request.PaymentRequest;
 import com.example.PRJWEB.DTO.Respon.PaymentResponse;
 import com.example.PRJWEB.Entity.Notification;
 import com.example.PRJWEB.Entity.Tour_booking;
+import com.example.PRJWEB.Exception.AppException;
+import com.example.PRJWEB.Exception.ErrorCode;
 import com.example.PRJWEB.Service.NotificationService;
 import com.example.PRJWEB.Service.NotificationWebSocketHandler;
 import com.example.PRJWEB.Service.PaymentService;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -76,22 +79,54 @@ public class PaymentController {
 
     @GetMapping("/vnpay-return")
     public ResponseEntity<String> handleVnpayReturn(@RequestParam Map<String, String> params) {
-        String bookingId = params.get("vnp_TxnRef");
+
+        String orderInfo = params.get("vnp_OrderInfo");
+        Long bookingId;
+        try {
+            System.out.println("Parsing vnp_OrderInfo: " + orderInfo);
+            String[] parts = orderInfo.split(":");
+            String idStr = parts[parts.length - 1].trim();
+            bookingId = Long.valueOf(idStr);
+        } catch (Exception e) {
+            System.err.println("Error parsing vnp_OrderInfo: " + e.getMessage());
+            return ResponseEntity.status(302).header("Location", "http://localhost:3000/payment-result?status=failed").body(null);
+        }
+
         String responseCode = params.get("vnp_ResponseCode");
+        String amountStr = params.get("vnp_Amount");
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(amountStr).divide(new BigDecimal(100));
+        } catch (Exception e) {
+            return ResponseEntity.status(302).header("Location", "http://localhost:3000/payment-result?status=failed").body(null);
+        }
+
         if ("00".equals(responseCode)) {
-            tourBookingService.updateBookingStatus(Long.parseLong(bookingId), "PAID");
-            Tour_booking booking = tourBookingService.getBookingById(Long.parseLong(bookingId));
-            if (!notificationService.existsNotification("SUCCESS", Long.parseLong(bookingId), booking.getCustomer().getId())) {
+            Tour_booking booking = tourBookingService.getBookingById(bookingId);
+            if (!booking.getStatus().equals("PENDING") && !booking.getStatus().equals("DEPOSITED")) {
+                System.out.println("Booking already processed: status=" + booking.getStatus());
+                return ResponseEntity.status(302).header("Location", "http://localhost:3000/payment-result?status=already_processed").body(null);
+            }
+
+            PaymentRequest paymentRequest = new PaymentRequest();
+            paymentRequest.setBookingId(bookingId);
+            paymentRequest.setAmount(amount);
+            paymentRequest.setMethod("VNPAY");
+            boolean isPayFull = amount.compareTo(booking.getTotalPrice()) >= 0;
+            paymentRequest.setPayFull(isPayFull);
+            paymentService.makePayment(paymentRequest);
+
+            if (!notificationService.existsNotification("PAYMENT_SUCCESS", bookingId, booking.getCustomer().getId())) {
                 Notification notification = new Notification();
                 notification.setTitle("Thanh toán thành công!");
-                notification.setMessage(String.format("Đặt tour %s (#%s) thành công. Cảm ơn bạn đã chọn chúng tôi!",
-                        booking.getTour().getTourName(), bookingId));
-                notification.setType("SUCCESS");
+                notification.setMessage(String.format("Bạn đã thanh toán %s VNĐ cho tour %s (#%s). Cảm ơn bạn đã chọn chúng tôi!",
+                        amount, booking.getTour().getTourName(), bookingId));
+                notification.setType("PAYMENT_SUCCESS");
                 notification.setIsActive(true);
                 notification.setUserId(booking.getCustomer().getId());
-                notification.setBookingId(Long.parseLong(bookingId));
+                notification.setBookingId(bookingId);
                 notification.setCreatedAt(LocalDateTime.now());
-                notification.setExpiresAt(LocalDateTime.now().plusHours(24));
+                notification.setExpiresAt(LocalDateTime.now().plusDays(7));
                 notificationService.saveNotification(notification);
 
                 try {
@@ -103,10 +138,10 @@ public class PaymentController {
                     System.err.println("Error sending WebSocket message: " + e.getMessage());
                 }
             }
-            return ResponseEntity.ok("Thanh toán thành công!");
+            return ResponseEntity.status(302).header("Location", "http://localhost:3000/payment-result?status=success").body(null);
         } else {
-            tourBookingService.updateBookingStatus(Long.parseLong(bookingId), "FAILED");
-            return ResponseEntity.ok("Thanh toán thất bại!");
+            tourBookingService.updateBookingStatus(bookingId, "PENDING");
+            return ResponseEntity.status(302).header("Location", "http://localhost:3000/payment-result?status=failed").body(null);
         }
     }
 }

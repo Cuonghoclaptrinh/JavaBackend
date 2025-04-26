@@ -128,6 +128,11 @@ public class UserService {
         return userMapper.toUserResponse(user);
     }
 
-
+    public List<UserResponse> getEmployees() {
+        return userRepository.findByRolesContaining(Roles.STAFF.name())
+                .stream()
+                .map(userMapper::toUserResponse)
+                .collect(Collectors.toList());
+    }
 
 }

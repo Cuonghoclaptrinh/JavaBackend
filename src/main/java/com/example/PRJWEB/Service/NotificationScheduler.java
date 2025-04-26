@@ -8,6 +8,8 @@ import com.example.PRJWEB.Repository.TourBookingRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class NotificationScheduler {
+    private static final Logger logger = LoggerFactory.getLogger(NotificationScheduler.class);
     NotificationService notificationService;
     NotificationWebSocketHandler notificationWebSocketHandler;
     TourBookingRepository tourBookingRepository;
@@ -27,6 +30,12 @@ public class NotificationScheduler {
     // Thông báo ưu đãi (tất cả người dùng)
     @Scheduled(cron = "0 0 8 * * MON")
     public void createWeeklyPromotion() {
+        // Kiểm tra xem đã có thông báo khuyến mãi đang hoạt động chưa
+        if (notificationService.existsPromotionNotification()) {
+            logger.info("Weekly promotion notification already exists, skipping creation.");
+            return;
+        }
+
         Notification notification = new Notification();
         notification.setTitle("Ưu đãi tuần mới!");
         notification.setMessage("Giảm 15% tất cả tour biển khi đặt trước Chủ Nhật!");
@@ -40,16 +49,23 @@ public class NotificationScheduler {
             String wsMessage = String.format("{\"title\":\"%s\",\"message\":\"%s\"}",
                     notification.getTitle(), notification.getMessage());
             notificationWebSocketHandler.sendNotificationToAll(wsMessage);
+            logger.info("Sent weekly promotion notification to all users.");
         } catch (Exception e) {
-            System.err.println("Error sending WebSocket message: " + e.getMessage());
+            logger.error("Error sending WebSocket message for promotion: {}", e.getMessage());
         }
     }
 
     // Thông báo thanh toán phần còn lại (người dùng cụ thể)
-    @Scheduled(cron = "0 0 9 * * *") // Chạy hàng ngày lúc 9h sáng
+    @Scheduled(cron = "0 0 9 * * *")
     public void checkRemainingPayments() {
-        List<Tour_booking> bookings = tourBookingRepository.findByStatus("Booked"); // Booking chưa thanh toán hết
+        List<Tour_booking> bookings = tourBookingRepository.findByStatus("Booked");
         for (Tour_booking booking : bookings) {
+            // Kiểm tra xem đã có thông báo nhắc nhở cho booking này chưa
+            if (notificationService.existsNotification("REMINDER", booking.getBookingId(), booking.getCustomer().getId())) {
+                logger.info("Reminder notification for booking {} already exists, skipping.", booking.getBookingId());
+                continue;
+            }
+
             List<Payment> payments = paymentRepository.findByBooking(booking);
             BigDecimal paidAmount = payments.stream()
                     .map(Payment::getAmount)
@@ -63,6 +79,8 @@ public class NotificationScheduler {
                         remaining, booking.getTour().getTourName(), booking.getBookingId()));
                 notification.setType("REMINDER");
                 notification.setIsActive(true);
+                notification.setUserId(booking.getCustomer().getId());
+                notification.setBookingId(booking.getBookingId());
                 notification.setCreatedAt(LocalDateTime.now());
                 notification.setExpiresAt(LocalDateTime.now().plusDays(3));
                 notificationService.saveNotification(notification);
@@ -72,20 +90,27 @@ public class NotificationScheduler {
                             notification.getTitle(), notification.getMessage());
                     notificationWebSocketHandler.sendNotificationToUser(
                             String.valueOf(booking.getCustomer().getId()), wsMessage);
+                    logger.info("Sent payment reminder to user {} for booking {}.", booking.getCustomer().getId(), booking.getBookingId());
                 } catch (Exception e) {
-                    System.err.println("Error sending WebSocket message: " + e.getMessage());
+                    logger.error("Error sending WebSocket message for payment reminder: {}", e.getMessage());
                 }
             }
         }
     }
 
     // Thông báo sắp đến ngày khởi hành tour (người đặt tour)
-    @Scheduled(cron = "0 0 8 * * *") // Chạy hàng ngày lúc 8h sáng
+    @Scheduled(cron = "0 0 8 * * *")
     public void checkUpcomingTours() {
         LocalDate today = LocalDate.now();
         LocalDate threeDaysFromNow = today.plusDays(3);
         List<Tour_booking> bookings = tourBookingRepository.findByStatusIn(List.of("Booked", "Paid"));
         for (Tour_booking booking : bookings) {
+            // Kiểm tra xem đã có thông báo cho tour này chưa
+            if (notificationService.existsNotification("UPCOMING_TOUR", booking.getBookingId(), booking.getCustomer().getId())) {
+                logger.info("Upcoming tour notification for booking {} already exists, skipping.", booking.getBookingId());
+                continue;
+            }
+
             LocalDate startDate = booking.getTour().getTourSchedules().getFirst().getDepartureDate();
             if (startDate != null && startDate.isEqual(threeDaysFromNow)) {
                 Notification notification = new Notification();
@@ -94,6 +119,8 @@ public class NotificationScheduler {
                         booking.getTour().getTourName(), booking.getBookingId(), startDate));
                 notification.setType("UPCOMING_TOUR");
                 notification.setIsActive(true);
+                notification.setUserId(booking.getCustomer().getId());
+                notification.setBookingId(booking.getBookingId());
                 notification.setCreatedAt(LocalDateTime.now());
                 notification.setExpiresAt(LocalDateTime.now().plusDays(3));
                 notificationService.saveNotification(notification);
@@ -103,8 +130,9 @@ public class NotificationScheduler {
                             notification.getTitle(), notification.getMessage());
                     notificationWebSocketHandler.sendNotificationToUser(
                             String.valueOf(booking.getCustomer().getId()), wsMessage);
+                    logger.info("Sent upcoming tour notification to user {} for booking {}.", booking.getCustomer().getId(), booking.getBookingId());
                 } catch (Exception e) {
-                    System.err.println("Error sending WebSocket message: " + e.getMessage());
+                    logger.error("Error sending WebSocket message for upcoming tour: {}", e.getMessage());
                 }
             }
         }

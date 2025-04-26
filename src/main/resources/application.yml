@@ -32,5 +32,5 @@ vnpay:
   tmnCode: V3FZTK5D
   hashSecret: DKB4M4P0VLKUWVRZC3F42S2YESLIW7XJ
   payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-  returnUrl: http://localhost:8080/userIdenity/payment/vnpay-return
+  returnUrl: http://localhost:8080/payment/vnpay-return
 

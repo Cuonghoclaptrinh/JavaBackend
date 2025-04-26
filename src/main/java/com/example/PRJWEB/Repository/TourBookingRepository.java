@@ -12,4 +12,5 @@ public interface TourBookingRepository extends JpaRepository<Tour_booking , Long
 
     List<Tour_booking> findByStatus(String status);
     List<Tour_booking> findByStatusIn(List<String> statuses);
+    List<Tour_booking> findByTour_TourId(Integer tourId);
 }
