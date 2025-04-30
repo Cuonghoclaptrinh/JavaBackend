@@ -33,7 +33,9 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(1018 , "notification not found" , HttpStatus.BAD_REQUEST),
     INVALID_ROLE(1005, "Invalid role", HttpStatus.BAD_REQUEST),
     INVALID_ORDER_INFO(1006, "Invalid order info", HttpStatus.BAD_REQUEST),
-    INVALID_AMOUNT(1005, "Invalid amount", HttpStatus.BAD_REQUEST);
+    INVALID_AMOUNT(1005, "Invalid amount", HttpStatus.BAD_REQUEST),
+    SCHEDULE_NOT_EXISTED(1005, "schedule not existed", HttpStatus.BAD_REQUEST),
+    BOOKING_LIMIT_EXCEEDED(1005, "booking limit exceeded", HttpStatus.BAD_REQUEST);
     ;
     int code;
     String message;

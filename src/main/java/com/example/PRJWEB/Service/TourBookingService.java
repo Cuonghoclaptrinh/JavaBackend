@@ -4,6 +4,7 @@ import com.example.PRJWEB.DTO.Request.TourBookingRequest;
 import com.example.PRJWEB.DTO.Respon.TourBookingResponse;
 import com.example.PRJWEB.Entity.Payment;
 import com.example.PRJWEB.Entity.Tour_booking;
+import com.example.PRJWEB.Entity.TourSchedule;
 import com.example.PRJWEB.Entity.Notification;
 import com.example.PRJWEB.Entity.User;
 import com.example.PRJWEB.Enums.Roles;
@@ -12,6 +13,7 @@ import com.example.PRJWEB.Exception.ErrorCode;
 import com.example.PRJWEB.Mapper.TourBookingMapper;
 import com.example.PRJWEB.Repository.TourBookingRepository;
 import com.example.PRJWEB.Repository.TourRepository;
+import com.example.PRJWEB.Repository.TourScheduleRepository;
 import com.example.PRJWEB.Repository.UserRepository;
 import com.example.PRJWEB.Repository.PaymentRepository;
 import lombok.AccessLevel;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 public class TourBookingService {
     TourBookingRepository tourBookingRepository;
     TourRepository tourRepository;
+    TourScheduleRepository tourScheduleRepository;
     UserRepository userRepository;
     PaymentRepository paymentRepository;
     TourBookingMapper tourBookingMapper;
@@ -42,21 +45,33 @@ public class TourBookingService {
     public TourBookingResponse bookTour(TourBookingRequest request) {
         var tour = tourRepository.findById(request.getTourId())
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_EXISTED));
+
+        var tourSchedule = tourScheduleRepository.findById(request.getTourScheduleId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_EXISTED));
+
         Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Long userId = jwt.getClaim("user_id");
         var customer = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+        // Kiểm tra peopleLimit
+        Integer currentPeople = tourBookingRepository.getTotalPeopleByTourScheduleId(request.getTourScheduleId());
+        currentPeople = currentPeople != null ? currentPeople : 0;
+        int newTotalPeople = currentPeople + request.getAdultQuantity() + request.getChildQuantity();
+        if (newTotalPeople > tourSchedule.getPeopleLimit()) {
+            throw new AppException(ErrorCode.BOOKING_LIMIT_EXCEEDED);
+        }
+
         BigDecimal totalPrice = calculateTotalPrice(tour.getNewPrice(), request.getAdultQuantity(), request.getChildQuantity());
 
         Tour_booking booking = new Tour_booking();
         booking.setTour(tour);
+        booking.setTourSchedule(tourSchedule);
         booking.setCustomer(customer);
         booking.setAdultQuantity(request.getAdultQuantity());
         booking.setChildQuantity(request.getChildQuantity());
         booking.setTotalPrice(totalPrice);
         booking.setStatus("PENDING");
-        booking.setBookingDate(LocalDateTime.now());
 
         Tour_booking savedBooking = tourBookingRepository.save(booking);
 
@@ -100,10 +115,8 @@ public class TourBookingService {
     }
 
     private TourBookingResponse mapToTourBookingResponse(Tour_booking booking) {
-        // Sử dụng MapStruct để ánh xạ cơ bản
         TourBookingResponse response = tourBookingMapper.toTourBookingResponse(booking);
 
-        // Bổ sung các trường không xử lý được trong MapStruct
         List<Payment> payments = paymentRepository.findByBooking(booking);
         BigDecimal paid = payments.stream()
                 .map(Payment::getAmount)
@@ -112,10 +125,7 @@ public class TourBookingService {
         String paymentTime = payments.isEmpty() ? "-" : payments.get(0).getPaymentDate()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 
-        String departureDate = tourRepository.findById(booking.getTour().getTourId())
-                .flatMap(tour -> tour.getTourSchedules().stream().findFirst())
-                .map(schedule -> schedule.getDepartureDate().toString())
-                .orElse("-");
+        String departureDate = booking.getTourSchedule() != null ? booking.getTourSchedule().getDepartureDate().toString() : "-";
 
         response.setPaid(paid);
         response.setMethod(method);

@@ -25,6 +25,10 @@ public class Tour_booking {
     Tour tour;  // Liên kết đến bảng Tour
 
     @ManyToOne
+    @JoinColumn(name = "tour_schedule_id", referencedColumnName = "id")
+    TourSchedule tourSchedule;
+
+    @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     User customer;  // Liên kết đến bảng User (customer)
 

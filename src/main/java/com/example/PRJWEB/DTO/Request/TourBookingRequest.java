@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TourBookingRequest {
     int tourId;
+    int tourScheduleId;
     int adultQuantity;
     int childQuantity;
 }

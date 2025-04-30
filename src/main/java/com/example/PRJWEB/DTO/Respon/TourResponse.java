@@ -25,5 +25,5 @@ public class TourResponse {
     private BigDecimal discount; // uu_dai
     private BigDecimal newPrice; // gia_moi
     private String image; // hinh_anh
-    private TourScheduleResponse tourSchedule;
+    private List<TourScheduleResponse> tourSchedules;
 }

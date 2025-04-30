@@ -18,16 +18,15 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE , makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class TourService {
     TourRepository tourRepository;
@@ -37,27 +36,24 @@ public class TourService {
     @PreAuthorize("hasAnyAuthority('ADMIN','STAFF')")
     public TourResponse addTour(TourRequest request) {
         Tour tour = tourMapper.toEntity(request);
+        tour.setTourSchedules(new ArrayList<>());
 
-        TourSchedule tourSchedule=TourSchedule.builder()
+        TourSchedule tourSchedule = TourSchedule.builder()
                 .tour(tour)
                 .departureDate(request.getDepartureDate())
                 .peopleLimit(request.getPeopleLimit())
                 .status(TourStatus.ACTIVE)
                 .build();
 
+        tour.getTourSchedules().add(tourSchedule);
         tourRepository.save(tour);
-
         tourScheduleRepository.save(tourSchedule);
 
-
-        TourResponse response = tourMapper.toTourResponse(tour);
-        response.setTourSchedule(tourMapper.toTourScheduleResponse(tourSchedule));
-
-        return response;
+        return tourMapper.toTourResponse(tour);
     }
 
     @PreAuthorize("hasAnyAuthority('ADMIN','STAFF')")
-    public TourResponse updateTour(Integer tourId, TourRequest request)  {
+    public TourResponse updateTour(Integer tourId, TourRequest request) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_EXISTED));
         tourMapper.updateTourFromRequest(request, tour);
@@ -65,46 +61,35 @@ public class TourService {
         return tourMapper.toTourResponse(tour);
     }
 
-
     public List<TourResponse> getTour() {
         return tourRepository.findAll().stream()
-                .map(tour -> {
-                    TourResponse response = tourMapper.toTourResponse(tour);
-
-                    // Lấy schedule đang hoạt động cho tour này
-                    TourSchedule activeSchedule = tour.getTourSchedules().stream()
-                            .filter(schedule -> schedule.getStatus() == TourStatus.ACTIVE)
-                            .findFirst()
-                            .orElse(null);
-
-                    if (activeSchedule != null) {
-                        response.setTourSchedule(tourMapper.toTourScheduleResponse(activeSchedule));
-                    }
-
-                    return response;
-                })
+                .map(tourMapper::toTourResponse)
                 .collect(Collectors.toList());
     }
 
-
     @PreAuthorize("hasAnyAuthority('ADMIN')")
-    public void addScheduleToTour(Integer tourId, TourScheduleRequest scheduleRequest) {
+    public TourResponse addScheduleToTour(Integer tourId, TourScheduleRequest scheduleRequest) {
         Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tour"));
+                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_EXISTED));
 
-        TourSchedule schedule = new TourSchedule();
-        schedule.setTour(tour);
-        schedule.setDepartureDate(scheduleRequest.getDepartureDate());
-        schedule.setPeopleLimit(scheduleRequest.getPeopleLimit());
-        schedule.setStatus(TourStatus.ACTIVE); // mặc định chưa khởi hành
+        TourSchedule schedule = TourSchedule.builder()
+                .tour(tour)
+                .departureDate(scheduleRequest.getDepartureDate())
+                .peopleLimit(scheduleRequest.getPeopleLimit())
+                .status(TourStatus.ACTIVE)
+                .build();
 
+        tour.getTourSchedules().add(schedule);
         tourScheduleRepository.save(schedule);
+        tourRepository.save(tour);
+
+        return tourMapper.toTourResponse(tour);
     }
 
-
     @PreAuthorize("hasAnyAuthority('ADMIN')")
-    public  void deleteTour(int id){tourRepository.deleteById(id);}
-
+    public void deleteTour(int id) {
+        tourRepository.deleteById(id);
+    }
 
     public List<TourResponse> filterTour(String keyword, String region, String tourTypeStr,
                                          BigDecimal minPrice, BigDecimal maxPrice) {
@@ -113,9 +98,9 @@ public class TourService {
         TourType tourType = null;
         if (tourTypeStr != null && !tourTypeStr.isEmpty()) {
             try {
-                tourType = TourType.valueOf(tourTypeStr.toUpperCase()); // Chuyển String -> Enum
+                tourType = TourType.valueOf(tourTypeStr.toUpperCase());
             } catch (IllegalArgumentException e) {
-                 // Kiểm tra nếu giá trị không hợp lệ
+                log.warn("Invalid tourType: {}", tourTypeStr);
             }
         }
         List<Tour> filtered = tourRepository.filterTours(keyword, region, tourType, minPrice, maxPrice);

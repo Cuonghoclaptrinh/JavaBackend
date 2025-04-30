@@ -11,21 +11,19 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/tours")
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class TourController {
     TourService tourService;
 
     @PostMapping
-    public ApiResponse<TourResponse> addTour(@RequestBody @Valid TourRequest request)  {
+    public ApiResponse<TourResponse> addTour(@RequestBody @Valid TourRequest request) {
         System.out.println("Price from request: " + request.getPrice());
         return ApiResponse.<TourResponse>builder()
                 .message("Thêm tour thành công")
@@ -33,11 +31,11 @@ public class TourController {
                 .build();
     }
 
-    @PutMapping(value ="/{id}" )
-    public ApiResponse<TourResponse> updateTour(@PathVariable("id") Integer id,@RequestBody @Valid TourRequest request)  {
+    @PutMapping("/{id}")
+    public ApiResponse<TourResponse> updateTour(@PathVariable("id") Integer id, @RequestBody @Valid TourRequest request) {
         return ApiResponse.<TourResponse>builder()
                 .message("Cập nhật tour thành công")
-                .result(tourService.updateTour(id,request))
+                .result(tourService.updateTour(id, request))
                 .build();
     }
 
@@ -59,17 +57,15 @@ public class TourController {
     }
 
     @PostMapping("/{tourId}/schedule")
-    public ApiResponse<String> addSchedule(
+    public ApiResponse<TourResponse> addSchedule(
             @PathVariable Integer tourId,
             @RequestBody TourScheduleRequest scheduleRequest
     ) {
-        tourService.addScheduleToTour(tourId, scheduleRequest);
-        return ApiResponse.<String>builder()
+        return ApiResponse.<TourResponse>builder()
                 .message("Thêm lịch khởi hành mới thành công!")
-                .result("OK")
+                .result(tourService.addScheduleToTour(tourId, scheduleRequest))
                 .build();
     }
-
 
     @GetMapping("/filter")
     public ApiResponse<List<TourResponse>> filterTour(

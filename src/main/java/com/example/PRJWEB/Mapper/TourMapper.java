@@ -8,12 +8,28 @@ import com.example.PRJWEB.Entity.TourSchedule;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {TourMapperHelper.class})
 public interface TourMapper {
-    @Mapping(source = "price", target = "price")
+
+    @Mapping(target = "tourSchedules", ignore = true)
     Tour toEntity(TourRequest request);
+
     TourResponse toTourResponse(Tour tour);
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "peopleLimit", target = "peopleLimit")
+    @Mapping(source = "departureDate", target = "departureDate", dateFormat = "yyyy-MM-dd")
+    @Mapping(source = "status", target = "status", qualifiedByName = "enumToString")
+    @Mapping(target = "currentPeople", source = "id", qualifiedByName = "mapCurrentPeople")
     TourScheduleResponse toTourScheduleResponse(TourSchedule tourSchedule);
+
+    @Mapping(target = "tourSchedules", ignore = true)
     void updateTourFromRequest(TourRequest request, @MappingTarget Tour tour);
+
+    @Named("enumToString")
+    default String enumToString(Enum<?> enumValue) {
+        return enumValue != null ? enumValue.name() : null;
+    }
 }
