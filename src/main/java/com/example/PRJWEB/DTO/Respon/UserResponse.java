@@ -22,4 +22,5 @@ public class UserResponse {
     String address;
     LocalDate dateOfBirth;
     String citizenId;
+    String avatar;
 }

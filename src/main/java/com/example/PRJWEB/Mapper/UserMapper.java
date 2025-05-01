@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public interface UserMapper {
     User toUserRequest(UserRequest request);
     @Mapping(target = "fullname", source = "fullname")
+    @Mapping(source = "avatar", target = "avatar")
     UserResponse toUserResponse(User user);
 
 }

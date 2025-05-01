@@ -35,7 +35,8 @@ public enum ErrorCode {
     INVALID_ORDER_INFO(1006, "Invalid order info", HttpStatus.BAD_REQUEST),
     INVALID_AMOUNT(1005, "Invalid amount", HttpStatus.BAD_REQUEST),
     SCHEDULE_NOT_EXISTED(1005, "schedule not existed", HttpStatus.BAD_REQUEST),
-    BOOKING_LIMIT_EXCEEDED(1005, "booking limit exceeded", HttpStatus.BAD_REQUEST);
+    BOOKING_LIMIT_EXCEEDED(1005, "booking limit exceeded", HttpStatus.BAD_REQUEST),
+    INVALID_IMAGE_COUNT(1005, "invalid image count", HttpStatus.BAD_REQUEST),
     ;
     int code;
     String message;

@@ -35,6 +35,9 @@ public class TourService {
 
     @PreAuthorize("hasAnyAuthority('ADMIN','STAFF')")
     public TourResponse addTour(TourRequest request) {
+        if (request.getImages().size() < 1 || request.getImages().size() > 3) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_COUNT);
+        }
         Tour tour = tourMapper.toEntity(request);
         tour.setTourSchedules(new ArrayList<>());
 
@@ -54,6 +57,9 @@ public class TourService {
 
     @PreAuthorize("hasAnyAuthority('ADMIN','STAFF')")
     public TourResponse updateTour(Integer tourId, TourRequest request) {
+        if (request.getImages().size() < 1 || request.getImages().size() > 3) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_COUNT);
+        }
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_EXISTED));
         tourMapper.updateTourFromRequest(request, tour);

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -24,6 +25,6 @@ public class TourResponse {
     private String region; // khu_vuc
     private BigDecimal discount; // uu_dai
     private BigDecimal newPrice; // gia_moi
-    private String image; // hinh_anh
+    private List<String> images = new ArrayList<>();
     private List<TourScheduleResponse> tourSchedules;
 }

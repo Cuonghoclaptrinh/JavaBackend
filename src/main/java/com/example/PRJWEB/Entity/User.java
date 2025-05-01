@@ -34,4 +34,6 @@ public class User {
     String address;
     LocalDate dateOfBirth;
     String citizenId;
+    @Column(name = "avatar")
+    String avatar;
 }

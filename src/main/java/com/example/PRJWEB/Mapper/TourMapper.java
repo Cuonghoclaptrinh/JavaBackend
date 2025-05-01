@@ -14,6 +14,7 @@ import org.mapstruct.Named;
 public interface TourMapper {
 
     @Mapping(target = "tourSchedules", ignore = true)
+    @Mapping(source = "images", target = "images")
     Tour toEntity(TourRequest request);
 
     TourResponse toTourResponse(Tour tour);
@@ -26,6 +27,7 @@ public interface TourMapper {
     TourScheduleResponse toTourScheduleResponse(TourSchedule tourSchedule);
 
     @Mapping(target = "tourSchedules", ignore = true)
+    @Mapping(source = "images", target = "images")
     void updateTourFromRequest(TourRequest request, @MappingTarget Tour tour);
 
     @Named("enumToString")

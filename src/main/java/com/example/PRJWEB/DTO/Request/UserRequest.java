@@ -34,4 +34,5 @@ public class UserRequest {
     @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDate dateOfBirth;
     String citizenId;
+    String avatar;
 }

@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import com.example.PRJWEB.Entity.TourSchedule;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -54,8 +55,10 @@ public class Tour {
     @Column(name = "new_price")
     BigDecimal newPrice; // gia_moi -> newPrice
 
-    @Column(name = "image")
-    String image; // hinh_anh -> image
+    @ElementCollection
+    @CollectionTable(name = "tour_images", joinColumns = @JoinColumn(name = "tour_id"))
+    @Column(name = "image_url")
+    List<String> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
     List<TourSchedule> tourSchedules;

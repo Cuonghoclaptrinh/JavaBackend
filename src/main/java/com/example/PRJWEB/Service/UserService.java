@@ -27,15 +27,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE , makeFinal = true)
-
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
     UserMapper userMapper;
 
-    public UserResponse register(UserRequest userRequest){
-        if(userRepository.existsByUsername(userRequest.getUsername()))
+    public UserResponse register(UserRequest userRequest) {
+        if (userRepository.existsByUsername(userRequest.getUsername()))
             throw new AppException(ErrorCode.USER_EXISTED);
 
         User user = userMapper.toUserRequest(userRequest);
@@ -45,7 +44,7 @@ public class UserService {
         user.setRoles(roles);
         userRepository.save(user);
 
-        return userMapper.toUserResponse(user) ;
+        return userMapper.toUserResponse(user);
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -64,7 +63,7 @@ public class UserService {
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
-    public List<UserResponse> getUser(){
+    public List<UserResponse> getUser() {
         return userRepository.findAll()
                 .stream().map(userMapper::toUserResponse)
                 .collect(Collectors.toList());
@@ -78,14 +77,14 @@ public class UserService {
     }
 
     @PostAuthorize("returnObject.username == authentication.name or hasAuthority('ADMIN')")
-    public UserResponse getUserById(int id){
+    public UserResponse getUserById(int id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         return userMapper.toUserResponse(user);
     }
 
     @PreAuthorize("#id == authentication.principal.claims['user_id'] or hasAuthority('ADMIN')")
-    public UserResponse updateUser(int id , UpdateUserRequest request){
+    public UserResponse updateUser(int id, UpdateUserRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         System.out.println("Principal: " + auth.getPrincipal());
         System.out.println("Authorities: " + auth.getAuthorities());
@@ -97,8 +96,9 @@ public class UserService {
         user.setCitizenId(request.getCitizenId());
         user.setDateOfBirth(request.getDateOfBirth());
         user.setFullname(request.getFullname());
-        System.out.println("DEBUG - Request Fullname: " + request.getFullname() + user.getFullname());
-        //Lấy quyền hiện tại của người dùng đăng nhập
+        user.setAvatar(request.getAvatar()); // Cập nhật avatar
+        System.out.println("DEBUG - Request Fullname: " + request.getFullname() + ", Avatar: " + request.getAvatar());
+        // Lấy quyền hiện tại của người dùng đăng nhập
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
                 .getAuthorities()
                 .stream()
@@ -113,15 +113,14 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-
-    @PreAuthorize("hasAuthority( 'ADMIN')")
-    public void deleteUser(int id){
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public void deleteUser(int id) {
         userRepository.deleteById(id);
     }
 
-    public UserResponse getMyInfo(){
+    public UserResponse getMyInfo() {
         var context = SecurityContextHolder.getContext();
-        String name=context.getAuthentication().getName();
+        String name = context.getAuthentication().getName();
         User user = userRepository.findByUsername(name).orElseThrow(
                 () -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
@@ -134,5 +133,4 @@ public class UserService {
                 .map(userMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
-
 }
