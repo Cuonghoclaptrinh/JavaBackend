@@ -2,7 +2,9 @@ package com.example.PRJWEB.Service;
 
 import com.example.PRJWEB.Configure.VNPayConfig;
 import com.example.PRJWEB.DTO.Request.PaymentRequest;
+import com.example.PRJWEB.DTO.Respon.PaymentDetailResponse;
 import com.example.PRJWEB.DTO.Respon.PaymentResponse;
+import com.example.PRJWEB.DTO.Respon.UserDTO;
 import com.example.PRJWEB.Entity.Payment;
 import com.example.PRJWEB.Entity.Tour_booking;
 import com.example.PRJWEB.Entity.Notification;
@@ -96,7 +98,7 @@ public class PaymentService {
                 }
                 notificationType = "DEPOSIT_SUCCESS";
                 bookingStatus = "DEPOSITED";
-                payment.setStatus(PaymentStatus.PENDING);
+                payment.setStatus(PaymentStatus.PAID); // Cập nhật thành PAID cho cọc
                 payment.setRemainingAmount(totalPrice.subtract(amountToPay));
             }
         } else {
@@ -140,11 +142,141 @@ public class PaymentService {
                 notificationWebSocketHandler.sendNotificationToUser(
                         String.valueOf(booking.getCustomer().getId()), wsMessage);
             } catch (Exception e) {
-                System.out.println("Failed to send WebSocket message: " + e.getMessage());
+                System.out.println("Lỗi gửi thông báo WebSocket: " + e.getMessage());
             }
         }
 
         // Trả về response
+        return paymentMapper.toPaymentResponse(savedPayment);
+    }
+
+    public PaymentResponse handleVnpayCallback(Map<String, String> params) {
+        // Xác minh chữ ký
+        if (!verifyChecksum(params)) {
+            throw new AppException(ErrorCode.INVALID_PAYMENT_CHECKSUM);
+        }
+
+        // Lấy thông tin từ callback
+        String vnp_ResponseCode = params.get("vnp_ResponseCode");
+        String vnp_TxnRef = params.get("vnp_TxnRef");
+        String vnp_Amount = params.get("vnp_Amount");
+        String vnp_OrderInfo = params.get("vnp_OrderInfo");
+
+        // Kiểm tra giao dịch thành công
+        if (!"00".equals(vnp_ResponseCode)) {
+            throw new AppException(ErrorCode.PAYMENT_FAILED);
+        }
+
+        // Lấy bookingId từ orderInfo
+        String bookingIdStr = vnp_OrderInfo.replace("Thanh toán đơn tour: ", "");
+        Long bookingId;
+        try {
+            bookingId = Long.parseLong(bookingIdStr);
+        } catch (NumberFormatException e) {
+            throw new AppException(ErrorCode.INVALID_BOOKING_ID);
+        }
+
+        // Tìm booking
+        Tour_booking booking = tourBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        // Kiểm tra trạng thái booking
+        if (!booking.getStatus().equals("PENDING") && !booking.getStatus().equals("DEPOSITED")) {
+            throw new AppException(ErrorCode.INVALID_BOOKING_STATUS);
+        }
+
+        // Tính số tiền
+        BigDecimal amount = new BigDecimal(vnp_Amount).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP);
+
+        // Tính tổng số tiền đã thanh toán
+        List<Payment> existingPayments = paymentRepository.findByBooking(booking);
+        BigDecimal paidAmount = existingPayments.stream()
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPrice = booking.getTotalPrice();
+        BigDecimal remainingAmount = totalPrice.subtract(paidAmount);
+
+        // Kiểm tra số tiền
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new AppException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+        }
+
+        // Xử lý thanh toán
+        String notificationType;
+        String bookingStatus;
+        Payment payment = Payment.builder()
+                .booking(booking)
+                .amount(amount)
+                .paymentDate(LocalDateTime.now())
+                .method("VNPAY")
+                .status(PaymentStatus.PAID) // Luôn là PAID cho giao dịch VNPay thành công
+                .txnRef(vnp_TxnRef)
+                .build();
+
+        if (booking.getStatus().equals("PENDING")) {
+            // Thanh toán lần đầu
+            BigDecimal minDeposit = totalPrice.multiply(DEPOSIT_RATIO);
+            if (amount.compareTo(totalPrice) >= 0) {
+                // Thanh toán toàn bộ
+                if (amount.compareTo(totalPrice) < 0) {
+                    throw new AppException(ErrorCode.INSUFFICIENT_PAYMENT_AMOUNT);
+                }
+                notificationType = "PAYMENT_SUCCESS";
+                bookingStatus = "PAID";
+                payment.setRemainingAmount(BigDecimal.ZERO);
+            } else {
+                // Thanh toán cọc
+                if (amount.compareTo(minDeposit) < 0) {
+                    throw new AppException(ErrorCode.INSUFFICIENT_DEPOSIT_AMOUNT);
+                }
+                notificationType = "DEPOSIT_SUCCESS";
+                bookingStatus = "DEPOSITED";
+                payment.setRemainingAmount(totalPrice.subtract(amount));
+            }
+        } else {
+            // Thanh toán phần còn lại
+            if (amount.compareTo(remainingAmount) < 0) {
+                throw new AppException(ErrorCode.INSUFFICIENT_PAYMENT_AMOUNT);
+            }
+            notificationType = "PAYMENT_SUCCESS";
+            bookingStatus = "PAID";
+            payment.setRemainingAmount(BigDecimal.ZERO);
+        }
+
+        // Lưu thanh toán
+        Payment savedPayment = paymentRepository.save(payment);
+
+        // Cập nhật trạng thái booking
+        tourBookingService.updateBookingStatus(booking.getBookingId(), bookingStatus);
+
+        // Tạo thông báo
+        if (!notificationService.existsNotification(notificationType, booking.getBookingId(), booking.getCustomer().getId())) {
+            Notification notification = new Notification();
+            notification.setTitle(notificationType.equals("DEPOSIT_SUCCESS") ? "Đặt cọc thành công!" : "Thanh toán thành công!");
+            notification.setMessage(String.format(
+                    notificationType.equals("DEPOSIT_SUCCESS") ?
+                            "Bạn đã đặt cọc %s VNĐ cho tour %s (#%s). Vui lòng thanh toán phần còn lại!" :
+                            "Bạn đã thanh toán %s VNĐ cho tour %s (#%s). Cảm ơn bạn đã chọn chúng tôi!",
+                    amount, booking.getTour().getTourName(), booking.getBookingId()
+            ));
+            notification.setType(notificationType);
+            notification.setIsActive(true);
+            notification.setUserId(booking.getCustomer().getId());
+            notification.setBookingId(booking.getBookingId());
+            notification.setCreatedAt(LocalDateTime.now());
+            notification.setExpiresAt(LocalDateTime.now().plusDays(7));
+            notificationService.saveNotification(notification);
+
+            try {
+                String wsMessage = String.format("{\"title\":\"%s\",\"message\":\"%s\",\"type\":\"%s\"}",
+                        notification.getTitle(), notification.getMessage(), notification.getType());
+                notificationWebSocketHandler.sendNotificationToUser(
+                        String.valueOf(booking.getCustomer().getId()), wsMessage);
+            } catch (Exception e) {
+                System.out.println("Lỗi gửi thông báo WebSocket: " + e.getMessage());
+            }
+        }
+
         return paymentMapper.toPaymentResponse(savedPayment);
     }
 
@@ -174,6 +306,78 @@ public class PaymentService {
         return payments.stream()
                 .map(paymentMapper::toPaymentResponse)
                 .collect(Collectors.toList());
+    }
+
+    public PaymentDetailResponse getPaymentDetail(Long bookingId) {
+        // Tìm booking theo bookingId
+        Tour_booking booking = tourBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        // Lấy thông tin người dùng hiện tại từ SecurityContext
+        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userId = jwt.getClaim("user_id");
+        String scope = jwt.getClaimAsString("scope");
+
+        // Kiểm tra quyền truy cập
+        if (!"ADMIN".equals(scope)) { // Nếu không phải admin
+            if (!booking.getCustomer().getId().equals(userId)) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+
+        // Lấy tất cả giao dịch liên quan đến booking
+        List<Payment> allPayments = paymentRepository.findByBooking(booking);
+
+        // Tạo response
+        PaymentDetailResponse response = new PaymentDetailResponse();
+        response.setBookingId(booking.getBookingId());
+
+        // Tính tổng số tiền đã thanh toán và số tiền còn lại
+        BigDecimal totalPaid = allPayments.stream()
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingAmount = booking.getTotalPrice().subtract(totalPaid);
+
+        response.setAmount(totalPaid);
+        response.setRemainingAmount(remainingAmount);
+        response.setPaymentDate(allPayments.isEmpty() ? null : allPayments.get(allPayments.size() - 1).getPaymentDate());
+        response.setTotalBookingAmount(booking.getTotalPrice());
+        response.setBookingStatus(booking.getStatus());
+        response.setTourName(booking.getTour().getTourName());
+        response.setCustomer(new UserDTO(
+                booking.getCustomer().getId(),
+                booking.getCustomer().getFullname(),
+                booking.getCustomer().getPhone(),
+                booking.getCustomer().getEmail()
+        ));
+        // Xử lý tourSchedule null
+        response.setDepartureDate(booking.getTourSchedule() != null ?
+                booking.getTourSchedule().getDepartureDate().toString() : "Chưa xác định");
+        response.setAdultQuantity(booking.getAdultQuantity());
+        response.setChildQuantity(booking.getChildQuantity());
+        response.setEmployee(booking.getEmployee() != null ? new UserDTO(
+                booking.getEmployee().getId(),
+                booking.getEmployee().getFullname(),
+                booking.getEmployee().getPhone(),
+                booking.getEmployee().getEmail()
+        ) : null);
+
+        // Danh sách tất cả giao dịch của booking
+        response.setRelatedPayments(allPayments.stream()
+                .map(p -> {
+                    PaymentResponse pr = new PaymentResponse();
+                    pr.setPaymentId(p.getPaymentId());
+                    pr.setBookingId(booking.getBookingId());
+                    pr.setAmount(p.getAmount());
+                    pr.setRemainingAmount(p.getRemainingAmount());
+                    pr.setMethod(p.getMethod());
+                    pr.setStatus(p.getStatus().name());
+                    pr.setPaymentDate(p.getPaymentDate());
+                    return pr;
+                })
+                .collect(Collectors.toList()));
+
+        return response;
     }
 
     public String createVnpayPaymentUrl(Long bookingId, BigDecimal amount) {
@@ -262,7 +466,7 @@ public class PaymentService {
             }
             return hash.toString();
         } catch (Exception e) {
-            System.err.println("Error in hmacSHA512: " + e.getMessage());
+            System.err.println("Lỗi trong hmacSHA512: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Lỗi tạo chữ ký thanh toán", e);
         }

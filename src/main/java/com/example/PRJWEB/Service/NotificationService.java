@@ -29,19 +29,18 @@ public class NotificationService {
     UserNotificationRepository userNotificationRepository;
     UserRepository userRepository;
 
-    public List<NotificationResponse> getActiveNotifications() {
+    public List<NotificationResponse> getAllNotifications() {
         Long userId = getCurrentUserId();
-        LocalDateTime now = LocalDateTime.now();
-        List<Notification> globalNotifications = notificationRepository.findByIsActiveTrueAndExpiresAtAfterAndUserIdIsNull(now);
-        List<Notification> userNotifications = userId != null
-                ? notificationRepository.findByIsActiveTrueAndExpiresAtAfterAndUserId(now, userId)
-                : List.of();
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
 
-        List<Notification> notifications = Stream.concat(globalNotifications.stream(), userNotifications.stream()).toList();
+        // Lấy tất cả thông báo liên quan đến userId hoặc thông báo toàn cục
+        List<Notification> notifications = notificationRepository.findByUserIdOrUserIdIsNull(
+                userId, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<UserNotification> userNotificationsStatus = userId != null
-                ? userNotificationRepository.findByUserId(userId)
-                : List.of();
+        // Lấy trạng thái isRead từ user_notification
+        List<UserNotification> userNotificationsStatus = userNotificationRepository.findByUserId(userId);
 
         return notifications.stream().map(notification -> {
             boolean isRead = userNotificationsStatus.stream()
@@ -70,10 +69,9 @@ public class NotificationService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        // Lấy tất cả thông báo hợp lệ, bất kể userId
-        List<Notification> notifications = notificationRepository.findByIsActiveTrueAndExpiresAtAfter(now);
-        System.out.println("All active notifications for admin (userId=" + userId + "): " + notifications);
+        // Lấy tất cả thông báo, không giới hạn isActive hay expiresAt
+        List<Notification> notifications = notificationRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+        System.out.println("All notifications for admin (userId=" + userId + "): " + notifications);
 
         // Gắn trạng thái isRead từ user_notification cho admin
         List<UserNotification> userNotificationsStatus = userNotificationRepository.findByUserId(userId);

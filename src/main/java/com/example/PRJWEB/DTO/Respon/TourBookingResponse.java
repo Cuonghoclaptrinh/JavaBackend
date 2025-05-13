@@ -13,14 +13,6 @@ import java.time.LocalDateTime;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TourBookingResponse {
-//    Long bookingId;
-//    String status;
-//    Integer adultQuantity;
-//    Integer childQuantity;
-//    BigDecimal totalPrice;
-//    LocalDateTime bookingDate;
-//    Long  tourId;
-//    Long  customerId;
     Long id; // Mã đơn đặt tour
     String maDatTour; // Mã đơn dạng T<year>-<id>
     Integer tourId; // ID tour

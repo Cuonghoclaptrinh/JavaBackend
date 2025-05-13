@@ -1,6 +1,7 @@
 package com.example.PRJWEB.Repository;
 
 import com.example.PRJWEB.Entity.Notification;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -14,5 +15,7 @@ public interface NotificationRepository extends JpaRepository<Notification , Lon
     List<Notification> findByIsActiveTrueAndTypeAndUserIdIsNull(String type);
     List<Notification> findByIsActiveTrueAndExpiresAtAfterAndTypeAndUserIdIsNull(LocalDateTime now, String type);
 
+    List<Notification> findByUserIdOrUserIdIsNull(Long userId, Sort sort);
+    List<Notification> findAll(Sort sort);
 }
 

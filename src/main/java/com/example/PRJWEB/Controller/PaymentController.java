@@ -2,6 +2,7 @@ package com.example.PRJWEB.Controller;
 
 import com.example.PRJWEB.DTO.Request.ApiResponse;
 import com.example.PRJWEB.DTO.Request.PaymentRequest;
+import com.example.PRJWEB.DTO.Respon.PaymentDetailResponse;
 import com.example.PRJWEB.DTO.Respon.PaymentResponse;
 import com.example.PRJWEB.Entity.Notification;
 import com.example.PRJWEB.Entity.Tour_booking;
@@ -19,6 +20,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -62,6 +65,26 @@ public class PaymentController {
                 .message("Lấy toàn bộ danh sách thanh toán thành công!")
                 .result(payments)
                 .build());
+    }
+
+    @GetMapping("/{bookingId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','STAFF','USER')")
+    public ResponseEntity<ApiResponse<PaymentDetailResponse>> getPaymentDetail(@PathVariable Long bookingId) {
+        PaymentDetailResponse response = paymentService.getPaymentDetail(bookingId);
+        return ResponseEntity.ok(ApiResponse.<PaymentDetailResponse>builder()
+                .message("Lấy chi tiết giao dịch thành công!")
+                .result(response)
+                .build());
+    }
+
+    @GetMapping("/vnpay-callback")
+    public String handleVnpayCallback(@RequestParam Map<String, String> params) {
+        try {
+            paymentService.handleVnpayCallback(params);
+            return "redirect:/payment-result?status=success";
+        } catch (Exception e) {
+            return "redirect:/payment-result?status=failed&message=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+        }
     }
 
     @GetMapping("/vnpay-url")

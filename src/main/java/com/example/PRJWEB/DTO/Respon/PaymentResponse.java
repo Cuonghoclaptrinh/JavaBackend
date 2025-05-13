@@ -15,7 +15,7 @@ public class PaymentResponse {
     Long paymentId;
     Long bookingId;
     String method;
-    PaymentStatus status;
+    String status;
     LocalDateTime paymentDate;
     BigDecimal amount;
     BigDecimal remainingAmount;

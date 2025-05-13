@@ -36,4 +36,7 @@ public class Payment {
 
     @Enumerated(EnumType.STRING)
     PaymentStatus status;
+
+    @Column(name = "txn_ref")
+    private String txnRef;
 }

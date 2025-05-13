@@ -36,14 +36,14 @@
 
         @Value("${spring.security.jwt.signer-key}")
         private String SIGNER_KEY;
-        private final String[] PUBLIC_ENDPOINT = {"users/customers", "/auth/token", "/auth/introspect" ,"/tours" ,"/payment/vnpay-return" , "/ws/**"};
+        private final String[] PUBLIC_ENDPOINT = {"users/customers", "/auth/token", "/auth/introspect" ,"/tours" ,"/payment/vnpay-return" , "/ws/**" ,"/reviews/**"};
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
             http
                     .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                     .authorizeHttpRequests(request ->
-                    request.requestMatchers( PUBLIC_ENDPOINT).permitAll()
+                    request.requestMatchers( PUBLIC_ENDPOINT ).permitAll()
                             .anyRequest().authenticated());
 
             http.oauth2ResourceServer(oauth ->

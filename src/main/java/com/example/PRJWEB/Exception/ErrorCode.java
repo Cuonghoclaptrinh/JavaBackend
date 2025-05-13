@@ -37,6 +37,13 @@ public enum ErrorCode {
     SCHEDULE_NOT_EXISTED(1005, "schedule not existed", HttpStatus.BAD_REQUEST),
     BOOKING_LIMIT_EXCEEDED(1005, "booking limit exceeded", HttpStatus.BAD_REQUEST),
     INVALID_IMAGE_COUNT(1005, "invalid image count", HttpStatus.BAD_REQUEST),
+    INVALID_TOUR_ID(400, "Invalid tour ID" ,  HttpStatus.BAD_REQUEST),
+    INVALID_RATING(400, "Rating must be between 1 and 5" , HttpStatus.BAD_REQUEST),
+    INVALID_COMMENT(400, "Comment cannot be empty" , HttpStatus.BAD_REQUEST),
+    PAYMENT_NOT_FOUND(400, "payment not found" , HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_CHECKSUM(400, "invalid payment checksum" , HttpStatus.BAD_REQUEST),
+    PAYMENT_FAILED(400, "payment false" , HttpStatus.BAD_REQUEST),
+    INVALID_BOOKING_ID(400, "invalid bookingId" , HttpStatus.BAD_REQUEST),
     ;
     int code;
     String message;

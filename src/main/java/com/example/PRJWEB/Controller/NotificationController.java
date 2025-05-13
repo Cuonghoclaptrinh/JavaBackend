@@ -27,11 +27,11 @@ public class NotificationController {
     NotificationService notificationService;
     NotificationWebSocketHandler notificationWebSocketHandler;
 
-    @GetMapping
+    @GetMapping("/history")
     public ApiResponse<List<NotificationResponse>> getNotifications() {
-        List<NotificationResponse> notifications = notificationService.getActiveNotifications();
+        List<NotificationResponse> notifications = notificationService.getAllNotifications();
         return ApiResponse.<List<NotificationResponse>>builder()
-                .message("Notifications retrieved successfully")
+                .message("All notifications retrieved successfully")
                 .result(notifications)
                 .build();
     }
