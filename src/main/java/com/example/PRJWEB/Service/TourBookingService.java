@@ -1,6 +1,7 @@
 package com.example.PRJWEB.Service;
 
 import com.example.PRJWEB.DTO.Request.TourBookingRequest;
+import com.example.PRJWEB.DTO.Respon.EmployeeStatsResponse;
 import com.example.PRJWEB.DTO.Respon.TourBookingResponse;
 import com.example.PRJWEB.Entity.Payment;
 import com.example.PRJWEB.Entity.Tour_booking;
@@ -244,5 +245,30 @@ public class TourBookingService {
 
     public List<Tour_booking> findByStatusIn(List<String> statuses) {
         return tourBookingRepository.findByStatusIn(statuses);
+    }
+
+    public List<EmployeeStatsResponse> getEmployeeStats() {
+        List<User> employees = userRepository.findByRolesContaining(Roles.STAFF.name());
+        return employees.stream().map(employee -> {
+            List<Tour_booking> bookings = tourBookingRepository.findByEmployee(employee);
+            int soLuongTour = bookings.size(); // Đếm số booking
+            BigDecimal doanhThu = bookings.stream()
+                    .filter(b -> b.getStatus().equals("PAID"))
+                    .map(Tour_booking::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal hoaHong = calculateCommission(doanhThu);
+            return EmployeeStatsResponse.builder()
+                    .id(employee.getId())
+                    .tenNhanVien(employee.getFullname())
+                    .soLuongTour(soLuongTour)
+                    .doanhThu(doanhThu)
+                    .hoaHong(hoaHong)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    private BigDecimal calculateCommission(BigDecimal doanhThu) {
+        // Hoa hồng 5% doanh thu
+        return doanhThu.multiply(BigDecimal.valueOf(0.05));
     }
 }
