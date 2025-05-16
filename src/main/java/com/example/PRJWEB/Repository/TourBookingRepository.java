@@ -20,4 +20,6 @@ public interface TourBookingRepository extends JpaRepository<Tour_booking , Long
 
     @Query("SELECT SUM(b.adultQuantity + b.childQuantity) FROM Tour_booking b WHERE b.tourSchedule.id = :tourScheduleId AND b.status IN ('DEPOSITED', 'PAID')")
     Integer getTotalPeopleByTourScheduleId(@Param("tourScheduleId") Integer tourScheduleId);
+
+    List<Tour_booking> findByEmployee(User employee);
 }

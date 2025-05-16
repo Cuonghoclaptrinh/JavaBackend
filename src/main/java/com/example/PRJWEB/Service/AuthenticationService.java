@@ -106,4 +106,8 @@ public class AuthenticationService {
         }
         return stringJoiner.toString();
     }
+
+    public String createTokenForUser(User user) {
+        return generateToken(user);
+    }
 }

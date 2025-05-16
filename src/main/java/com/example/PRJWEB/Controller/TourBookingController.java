@@ -3,6 +3,7 @@ package com.example.PRJWEB.Controller;
 import com.example.PRJWEB.DTO.Request.ApiResponse;
 import com.example.PRJWEB.DTO.Request.AssignEmployeeRequest;
 import com.example.PRJWEB.DTO.Request.TourBookingRequest;
+import com.example.PRJWEB.DTO.Respon.EmployeeStatsResponse;
 import com.example.PRJWEB.DTO.Respon.TourBookingResponse;
 import com.example.PRJWEB.DTO.Respon.UserResponse;
 import com.example.PRJWEB.Service.TourBookingService;
@@ -84,6 +85,17 @@ public class TourBookingController {
         return ApiResponse.<List<UserResponse>>builder()
                 .message("Employees retrieved successfully")
                 .result(employees)
+                .build();
+    }
+
+    @GetMapping("/employee-stats")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ApiResponse<List<EmployeeStatsResponse>> getEmployeeStats() {
+        List<EmployeeStatsResponse> stats = tourBookingService.getEmployeeStats();
+        return ApiResponse.<List<EmployeeStatsResponse>>builder()
+                .code(200)
+                .message("Retrieved employee stats successfully")
+                .result(stats)
                 .build();
     }
 }

@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.example.PRJWEB.Mapper.TourBookingMapper;
+import com.example.PRJWEB.Repository.PaymentRepository;
 import com.example.PRJWEB.Repository.TourBookingRepository;
 import com.example.PRJWEB.Repository.TourRepository;
+import com.example.PRJWEB.Repository.TourScheduleRepository;
 import com.example.PRJWEB.Repository.UserRepository;
 
 import java.math.BigDecimal;
@@ -26,6 +28,15 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @DisabledInAotMode
 class TourBookingServiceDiffblueTest {
     @MockitoBean
+    private NotificationService notificationService;
+
+    @MockitoBean
+    private NotificationWebSocketHandler notificationWebSocketHandler;
+
+    @MockitoBean
+    private PaymentRepository paymentRepository;
+
+    @MockitoBean
     private TourBookingMapper tourBookingMapper;
 
     @MockitoBean
@@ -36,6 +47,9 @@ class TourBookingServiceDiffblueTest {
 
     @MockitoBean
     private TourRepository tourRepository;
+
+    @MockitoBean
+    private TourScheduleRepository tourScheduleRepository;
 
     @MockitoBean
     private UserRepository userRepository;
