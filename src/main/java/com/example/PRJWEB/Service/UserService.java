@@ -199,4 +199,23 @@ public class UserService {
         existingUser.setRoles(user.getRoles());
         userRepository.save(existingUser);
     }
+
+    public void updatePassword(String email, String newPassword) {
+        String emailRegex = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
+        boolean isEmail = email.matches(emailRegex);
+
+        User user;
+        if (isEmail) {
+            user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        } else {
+            user = userRepository.findByUsername(email)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+
 }

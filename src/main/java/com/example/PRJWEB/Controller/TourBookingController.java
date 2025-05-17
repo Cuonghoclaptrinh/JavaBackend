@@ -6,6 +6,7 @@ import com.example.PRJWEB.DTO.Request.TourBookingRequest;
 import com.example.PRJWEB.DTO.Respon.EmployeeStatsResponse;
 import com.example.PRJWEB.DTO.Respon.TourBookingResponse;
 import com.example.PRJWEB.DTO.Respon.UserResponse;
+import com.example.PRJWEB.Entity.Tour_booking;
 import com.example.PRJWEB.Service.TourBookingService;
 import com.example.PRJWEB.Service.UserService;
 import lombok.AccessLevel;
@@ -96,6 +97,18 @@ public class TourBookingController {
                 .code(200)
                 .message("Retrieved employee stats successfully")
                 .result(stats)
+                .build();
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ApiResponse<TourBookingResponse> getBookingById(@PathVariable Long id) {
+        Tour_booking booking = tourBookingService.getBookingByOrderId(id);
+        TourBookingResponse response = tourBookingService.mapToTourBookingResponse(booking);
+        return ApiResponse.<TourBookingResponse>builder()
+                .code(200)
+                .message("Retrieved booking successfully")
+                .result(response)
                 .build();
     }
 }

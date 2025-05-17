@@ -46,6 +46,7 @@ public enum ErrorCode {
     INVALID_BOOKING_ID(400, "invalid bookingId" , HttpStatus.BAD_REQUEST),
     EMAIL_EXISTED(400, "email existed" , HttpStatus.BAD_REQUEST),
     FIREBASE_ERROR(400, "firebase error" , HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL(400, "invalid email" , HttpStatus.BAD_REQUEST),
     ;
     int code;
     String message;
